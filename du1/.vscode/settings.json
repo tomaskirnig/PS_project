@@ -1,0 +1,19 @@
+{
+    "workbench.colorCustomizations": {
+        "foreground": "#d0d0d0",
+        "editor.foreground": "#d0d0d0"
+    },
+    "editor.tokenColorCustomizations": {
+        "textMateRules": [
+            {
+                "scope": [
+                    "source",
+                    "text"
+                ],
+                "settings": {
+                    "foreground": "#d0d0d0"
+                }
+            }
+        ]
+    }
+}

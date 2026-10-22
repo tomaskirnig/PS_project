@@ -1,0 +1,36 @@
+Instrukce pro řešení domácích úkolů 1S - 3S:
+
+Úkoly řešte doplňováním požadovaných informací do dílčích úkolů v LMS (v harmonogramu cvičení i u jednotlivých úkolů je vždy stanoven termín odevzdání  úkolů) a v případě potřeby odevzdáním přílohy s grafickými výstupy (v LMS).
+
+Hodnocení domácích úkolů 1S - 3S:
+
+Dílčí úkoly: Automaticky v LMS po odevzdání dílčích domácích úkolů.
+Přílohy s grafickými výstupy: V LMS - do týdne od uzavření příslušného úkolu. 
+V případě, že budete cvičícím vyzváni k dodání funkčního R-skriptu, který jste pro analýzu použili, musíte R-skript dodat ke kontrole.
+Domácí úkoly 1S a 2S budou hodnoceny max. 7 body, domácí úkol  3S bude hodnocen max. 6 body.
+V součtu lze získat z domácích úkolů 1S - 3S maximálně 20 bodů. 
+Pro úspěšné absolvování předmětu musíte z úkolů 1S-3S získat alespoň 10 bodů.
+Popis datového souboru
+
+V datovém souboru jsou zaznamenány výkonnostní skóre (FPS) čtyř populárních grafických karet: Nvidia RTX 2080 Ti, Nvidia RTX 3070 Ti, AMD Radeon RX 6800 XT a AMD Radeon RX 7700 XT. Tyto karty byly testovány ve hře "Cyberpunk 2077" ve dvou různých verzích: původní release a po aplikaci 1.5 patche. Vaším úkolem je analyzovat, jak patch 1.5 ovlivnil výkonnostní skóre těchto karet ve hře. Pro každý unikátní testovaný systém (test) viz (id) byly testovány obě verze hry.
+
+V souboru FPS_data.xlsx jsou pro každý test uvedeny následující údaje:
+
+id … identifikátor testovaného systému (každý systém je unikátní PC systém),
+typ karty … Nvidia RTX 2080 Ti, Nvidia RTX 3070 Ti, AMD Radeon RX 6800 XT, AMD Radeon RX 7700 XT,
+testovaná verze ... „release“ a „patched“,
+FPS … naměřené výkonnostní skóre (FPS) pro danou grafickou kartu s danou verzi hry.
+
+1. cast 
+Data vhodně graficky prezentujte (krabicový graf, histogram, Q-Q graf).
+Pomocí nástrojů explorační analýzy zkoumejte nárůst výkonnostních skóre (FPS) po aplikaci 1.5 patche (tj. rozdíl výkonnostních skóre pro verzi „patched“ a verzi „release“) ve hře "Cyberpunk 2077" pro grafické karty Nvidia RTX 3070 Ti a AMD Radeon RX 6800 XT.
+
+Povinnou součástí vizualizace je: 
+
+vícenásobný krabicový graf pro původní data,
+vícenásobný krabicový graf pro data po odstranění odlehlých pozorování (pouze v případě, že odstraněním odlehlých pozorování došlo k významné změně vzhledu původního vícenásobného krabicového grafu),
+histogramy pro data po odstranění odlehlých pozorování,
+Q-Q grafy pro data po odstranění odlehlých pozorování.
+Graf musí být opatřen smysluplným titulkem (např. Obr. 1: Vizualizace ....).
+
+Za odevzdání povinné součástí vizualizace (tedy výše zmíněné grafy pro vaše data) získává student 0,2 body. Dalších 0,8 bodů lze získat za "kvalitu" provedení vizualizace.

@@ -1,0 +1,53 @@
+---
+title: "Domácí úkol 1S — Explorační analýza dat FPS"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+# Nastavení prostředí dle CV6
+pdf.options(bg = "white")
+par(bg = "white")
+set.seed(123)
+
+library(dplyr)
+```
+
+## 1. Načtení dat ze souboru Excel
+
+```{r import}
+cesta_dat <- "FPS_data.xlsx"
+stopifnot(file.exists(cesta_dat))
+
+# Načtení listu 'Vysledky mereni'
+data_raw <- readxl::read_excel(cesta_dat, sheet = "Vysledky mereni")
+
+# Výpis základní tabulky
+head(data_raw)
+```
+
+## 2. Základní kontrola tabulky
+
+```{r inspect}
+str(data_raw)
+names(data_raw)
+summary(data_raw)
+```
+
+## 3. Přejmenování sloupců pro další analýzu
+
+```{r rename}
+data_clean <- data_raw %>%
+  rename(
+    id = id,
+    rtx2080ti_rel = `Nvidia RTX 2080 Ti average FPS release (FPS)`,
+    rtx2080ti_pat = `Nvidia RTX 2080 Ti average FPS patched (FPS)`,
+    rtx3070ti_rel = `Nvidia RTX 3070 Ti average FPS release (FPS)`,
+    rtx3070ti_pat = `Nvidia RTX 3070 Ti average FPS patched (FPS)`,
+    rx6800xt_rel = `AMD Radeon RX 6800 XT average FPS release (FPS)`,
+    rx6800xt_pat = `AMD Radeon RX 6800 XT average FPS patched (FPS)`,
+    rx7700xt_rel = `AMD Radeon RX 7700 XT average FPS release (FPS)`,
+    rx7700xt_pat = `AMD Radeon RX 7700 XT average FPS patched (FPS)`
+  )
+
+head(data_clean)
+```
