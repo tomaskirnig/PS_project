@@ -1,41 +1,50 @@
 ---
 title: "Domácí úkol 1S — Explorační analýza dat FPS"
-output: html_notebook
+subtitle: "Vliv patche 1.5 ve hře Cyberpunk 2077 na grafické karty Nvidia RTX 3070 Ti a AMD Radeon RX 6800 XT"
+author: "Pravděpodobnost a statistika"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    theme: readable
 ---
 
 ```{r setup, include=FALSE}
-# Nastavení prostředí dle CV6
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.width = 8.5, fig.height = 5.2)
+options(repr.plot.width = 8.5, repr.plot.height = 5.2, repr.plot.res = 120)
 pdf.options(bg = "white")
 par(bg = "white")
 set.seed(123)
 
 library(dplyr)
+library(tidyr)
+library(readxl)
+library(rstatix)
+library(moments)
 ```
 
-## 1. Načtení dat ze souboru Excel
+# Úvod a popis zadání
+
+Cílem této práce je provést explorační analýzu dat ze souboru `FPS_data.xlsx`. Analyzujeme nárůst výkonnostních skóre (FPS) ve hře *Cyberpunk 2077* po aplikaci patche 1.5 ($\Delta\text{FPS} = \text{FPS}_{\text{patched}} - \text{FPS}_{\text{release}}$) pro dvě zkoumané grafické karty:
+- **Nvidia RTX 3070 Ti**
+- **AMD Radeon RX 6800 XT**
+
+Metodika a struktura analýzy vychází z postupů probíraných ve cvičení CV6.
+
+# Načtení dat a prvotní inspekce
 
 ```{r import}
-cesta_dat <- "FPS_data.xlsx"
+cesta_dat <- if (file.exists("FPS_data.xlsx")) "FPS_data.xlsx" else file.path("du1", "FPS_data.xlsx")
 stopifnot(file.exists(cesta_dat))
 
 # Načtení listu 'Vysledky mereni'
-data_raw <- readxl::read_excel(cesta_dat, sheet = "Vysledky mereni")
-
-# Výpis základní tabulky
+data_raw <- read_excel(cesta_dat, sheet = "Vysledky mereni")
 head(data_raw)
 ```
 
-## 2. Základní kontrola tabulky
-
-```{r inspect}
-str(data_raw)
-names(data_raw)
-summary(data_raw)
-```
-
-## 3. Přejmenování sloupců pro další analýzu
-
-```{r rename}
+```{r prep}
+# Přejmenování sloupců na jednodušší identifikátory
 data_clean <- data_raw %>%
   rename(
     id = id,
@@ -49,5 +58,244 @@ data_clean <- data_raw %>%
     rx7700xt_pat = `AMD Radeon RX 7700 XT average FPS patched (FPS)`
   )
 
-head(data_clean)
+# Výpočet nárůstu výkonu (patched - release)
+data_diff <- data_clean %>%
+  mutate(
+    narust_rtx3070ti = rtx3070ti_pat - rtx3070ti_rel,
+    narust_rx6800xt = rx6800xt_pat - rx6800xt_rel
+  )
+
+# Převedení do standardního formátu pro vícenásobné krabicové grafy
+data_long <- data_diff %>%
+  select(id, narust_rtx3070ti, narust_rx6800xt) %>%
+  pivot_longer(
+    cols = c(narust_rtx3070ti, narust_rx6800xt),
+    names_to = "karta",
+    values_to = "narust"
+  ) %>%
+  mutate(
+    karta = factor(case_when(
+      karta == "narust_rtx3070ti" ~ "Nvidia RTX 3070 Ti",
+      karta == "narust_rx6800xt" ~ "AMD Radeon RX 6800 XT"
+    ), levels = c("Nvidia RTX 3070 Ti", "AMD Radeon RX 6800 XT"))
+  )
 ```
+
+# Vícenásobný krabicový graf (původní data)
+
+```{r boxplot-puvodni}
+par(mar = c(4.5, 4.5, 3.5, 1.5))
+boxplot(narust ~ karta, data = data_long,
+        xlab = "Grafická karta",
+        ylab = "Nárůst výkonu [FPS]",
+        main = "Obr. 1: Vícenásobný krabicový graf nárůstu FPS pro původní data",
+        cex.main = 1.05,
+        cex.lab = 1.0,
+        col = c("#74a9cf", "#fd8d3c"),
+        border = c("#02818a", "#e6550d"))
+grid(nx = NA, ny = NULL)
+```
+
+**Komentář k Obr. 1:**  
+V původních datech vidíme výrazná odlehlá pozorování: u karty Nvidia RTX 3070 Ti se nachází extrémní propad na $-5{,}50$ FPS (záporná hodnota), zatímco u karty AMD Radeon RX 6800 XT se objevuje extrémní nárůst přes $+13$ FPS. Tato odlehlá pozorování výrazně roztahují svislou osu grafu.
+
+# Identifikace a vyřazení odlehlých pozorování
+
+K identifikaci odlehlých pozorování využijeme vnitřní hradby $[Q_1 - 1{,}5 \cdot IQR, Q_3 + 1{,}5 \cdot IQR]$ implementované ve funkci `rstatix::identify_outliers()`.
+
+```{r outliers}
+odlehla_pozorovani <- data_long %>%
+  group_by(karta) %>%
+  rstatix::identify_outliers(narust)
+
+knitr::kable(odlehla_pozorovani, caption = "Tab. 1: Identifikovaná odlehlá pozorování")
+```
+
+Byla identifikována následující odlehlá pozorování:
+- **Nvidia RTX 3070 Ti:** systém s `id = 38` (nárůst $-5{,}50$ FPS, extrémní odlehlá hodnota).
+- **AMD Radeon RX 6800 XT:** systém s `id = 7` (nárůst $+13{,}10$ FPS, extrémní odlehlá hodnota) a systém s `id = 15` (nárůst $+7{,}50$ FPS, mírně odlehlá hodnota).
+
+```{r filter-outliers}
+data_long <- data_long %>%
+  mutate(narust_bez_op = ifelse(id %in% odlehla_pozorovani$id, NA, narust))
+```
+
+# Vícenásobný krabicový graf (po odstranění odlehlých pozorování)
+
+Vzhledem k tomu, že odstranění odlehlých pozorování vedlo k **zásadní změně měřítka a vzhledu grafu** (rozsah osy Y se zúžil z cca $[-6, 14]$ na přibližně $[3, 7]$ FPS), je tento graf povinnou součástí analýzy.
+
+```{r boxplot-ocisteny}
+par(mar = c(4.5, 4.5, 3.5, 1.5))
+boxplot(narust_bez_op ~ karta, data = data_long,
+        xlab = "Grafická karta",
+        ylab = "Nárůst výkonu [FPS]",
+        main = "Obr. 2: Vícenásobný krabicový graf nárůstu FPS (po odstranění odlehlých pozorování)",
+        cex.main = 1.05,
+        cex.lab = 1.0,
+        col = c("#74a9cf", "#fd8d3c"),
+        border = c("#02818a", "#e6550d"))
+grid(nx = NA, ny = NULL)
+```
+
+**Komentář k Obr. 2:**  
+Po odstranění odlehlých hodnot jsou krabice a vousy detailně čitelné. Obě karty vykazují stabilní nárůst FPS s nízkou variabilitou. Karta Nvidia RTX 3070 Ti má mírně vyšší medián nárůstu ($5{,}20$ FPS) oproti AMD Radeon RX 6800 XT ($4{,}70$ FPS).
+
+# Histogramy nárůstu FPS (po odstranění odlehlých pozorování)
+
+```{r hist-rtx}
+fps_rtx_clean <- data_long %>%
+  filter(karta == "Nvidia RTX 3070 Ti", !is.na(narust_bez_op)) %>%
+  pull(narust_bez_op)
+
+par(mar = c(4.5, 4.5, 3.8, 1.5))
+dens_rtx <- density(fps_rtx_clean)
+max_h_rtx <- max(hist(fps_rtx_clean, plot = FALSE)$density, dens_rtx$y, dnorm(mean(fps_rtx_clean), mean(fps_rtx_clean), sd(fps_rtx_clean)))
+xlim_rtx <- c(min(fps_rtx_clean) - 0.5, max(fps_rtx_clean) + 0.5)
+ylim_rtx <- c(0, max_h_rtx * 1.35)
+
+hist(fps_rtx_clean,
+     freq = FALSE,
+     breaks = seq(floor(min(fps_rtx_clean) * 2) / 2, ceiling(max(fps_rtx_clean) * 2) / 2, by = 0.3),
+     xlim = xlim_rtx,
+     ylim = ylim_rtx,
+     xlab = "Nárůst výkonu [FPS]",
+     ylab = "Hustota pravděpodobnosti",
+     main = "Obr. 3: Histogram nárůstu FPS pro Nvidia RTX 3070 Ti\n(po odstranění odlehlých pozorování)",
+     cex.main = 1.0,
+     cex.lab = 1.0,
+     col = "#c6dbef",
+     border = "#08519c")
+grid()
+lines(dens_rtx, col = "red", lwd = 2)
+
+osa_x_rtx <- seq(xlim_rtx[1], xlim_rtx[2], length.out = 200)
+lines(osa_x_rtx, dnorm(osa_x_rtx, mean = mean(fps_rtx_clean), sd = sd(fps_rtx_clean)), col = "blue", lwd = 2, lty = 2)
+
+legend("topright",
+       legend = c("Jádrový odhad hustoty", "Teoretické normální rozdělení"),
+       col = c("red", "blue"),
+       lty = c(1, 2),
+       lwd = 2,
+       cex = 0.85,
+       bg = "white",
+       box.col = "#bdbdbd")
+```
+
+```{r hist-rx}
+fps_rx_clean <- data_long %>%
+  filter(karta == "AMD Radeon RX 6800 XT", !is.na(narust_bez_op)) %>%
+  pull(narust_bez_op)
+
+par(mar = c(4.5, 4.5, 3.8, 1.5))
+dens_rx <- density(fps_rx_clean)
+max_h_rx <- max(hist(fps_rx_clean, plot = FALSE)$density, dens_rx$y, dnorm(mean(fps_rx_clean), mean(fps_rx_clean), sd(fps_rx_clean)))
+xlim_rx <- c(min(fps_rx_clean) - 0.5, max(fps_rx_clean) + 0.5)
+ylim_rx <- c(0, max_h_rx * 1.35)
+
+hist(fps_rx_clean,
+     freq = FALSE,
+     breaks = seq(floor(min(fps_rx_clean) * 2) / 2, ceiling(max(fps_rx_clean) * 2) / 2, by = 0.3),
+     xlim = xlim_rx,
+     ylim = ylim_rx,
+     xlab = "Nárůst výkonu [FPS]",
+     ylab = "Hustota pravděpodobnosti",
+     main = "Obr. 4: Histogram nárůstu FPS pro AMD Radeon RX 6800 XT\n(po odstranění odlehlých pozorování)",
+     cex.main = 1.0,
+     cex.lab = 1.0,
+     col = "#fdd0a2",
+     border = "#a63603")
+grid()
+lines(dens_rx, col = "red", lwd = 2)
+
+osa_x_rx <- seq(xlim_rx[1], xlim_rx[2], length.out = 200)
+lines(osa_x_rx, dnorm(osa_x_rx, mean = mean(fps_rx_clean), sd = sd(fps_rx_clean)), col = "blue", lwd = 2, lty = 2)
+
+legend("topright",
+       legend = c("Jádrový odhad hustoty", "Teoretické normální rozdělení"),
+       col = c("red", "blue"),
+       lty = c(1, 2),
+       lwd = 2,
+       cex = 0.85,
+       bg = "white",
+       box.col = "#bdbdbd")
+```
+
+**Komentář k histogramům (Obr. 3 a 4):**  
+Histogramy obou karet jsou unimodální a přibližně symetrické. Křivka jádrového odhadu hustoty velmi dobře odpovídá teoretickému normálnímu rozdělení.
+
+# Q-Q grafy (po odstranění odlehlých pozorování)
+
+```{r qq-rtx}
+par(mar = c(4.5, 4.5, 3.8, 1.5))
+qq_range_rtx <- range(fps_rtx_clean)
+qqnorm(fps_rtx_clean,
+       xlab = "Teoretické kvantily [-]",
+       ylab = "Výběrové kvantily [FPS]",
+       main = "Obr. 5: Q-Q graf nárůstu FPS pro Nvidia RTX 3070 Ti\n(po odstranění odlehlých pozorování)",
+       cex.main = 1.0,
+       cex.lab = 1.0,
+       ylim = c(qq_range_rtx[1] - 0.4, qq_range_rtx[2] + 0.4),
+       pch = 20, col = "#08519c", cex = 1.2)
+qqline(fps_rtx_clean, col = "red", lwd = 2)
+grid()
+```
+
+```{r qq-rx}
+par(mar = c(4.5, 4.5, 3.8, 1.5))
+qq_range_rx <- range(fps_rx_clean)
+qqnorm(fps_rx_clean,
+       xlab = "Teoretické kvantily [-]",
+       ylab = "Výběrové kvantily [FPS]",
+       main = "Obr. 6: Q-Q graf nárůstu FPS pro AMD Radeon RX 6800 XT\n(po odstranění odlehlých pozorování)",
+       cex.main = 1.0,
+       cex.lab = 1.0,
+       ylim = c(qq_range_rx[1] - 0.4, qq_range_rx[2] + 0.4),
+       pch = 20, col = "#a63603", cex = 1.2)
+qqline(fps_rx_clean, col = "red", lwd = 2)
+grid()
+```
+
+**Komentář k Q-Q grafům (Obr. 5 a 6):**  
+Body v obou grafech téměř ideálně sledují teoretickou červenou přímku. Nevykazují žádné systematické odchylky na okrajích rozdělení.
+
+# Souhrnná tabulka statistik a posouzení normality
+
+```{r stats}
+spocti_statistiky <- function(df, sloupec, nazev_stavu) {
+  df %>%
+    group_by(karta) %>%
+    summarise(
+      Stav = nazev_stavu,
+      n = sum(!is.na({{ sloupec }})),
+      Prumer = round(mean({{ sloupec }}, na.rm = TRUE), 3),
+      Sm_Odchylka = round(sd({{ sloupec }}, na.rm = TRUE), 3),
+      Median = round(median({{ sloupec }}, na.rm = TRUE), 3),
+      IQR = round(IQR({{ sloupec }}, na.rm = TRUE), 3),
+      Min = round(min({{ sloupec }}, na.rm = TRUE), 3),
+      Max = round(max({{ sloupec }}, na.rm = TRUE), 3),
+      Sikmost = round(moments::skewness({{ sloupec }}, na.rm = TRUE), 3),
+      Spicatost = round(moments::kurtosis({{ sloupec }}, na.rm = TRUE) - 3, 3),
+      .groups = "drop"
+    )
+}
+
+tab_puvodni <- spocti_statistiky(data_long, narust, "Původní data")
+tab_ocistena <- spocti_statistiky(data_long, narust_bez_op, "Bez odlehlých pozorování")
+
+tabulka_vysledku <- bind_rows(tab_puvodni, tab_ocistena) %>%
+  arrange(karta, desc(Stav))
+
+knitr::kable(tabulka_vysledku, caption = "Tab. 2: Srovnání popisných statistik před a po odstranění odlehlých pozorování")
+```
+
+# Závěrečné vyhodnocení
+
+1. **Posouzení normality:**  
+   - Původní data vykazovala extrémní hodnoty šikmosti ($-6{,}09$ a $+4{,}33$) i špičatosti ($43{,}60$ a $26{,}50$) způsobené několika odlehlými body.
+   - Po odstranění odlehlých pozorování klesla výběrová šikmost i špičatost hluboko do intervalu $(-2, 2)$ (šikmost $0{,}121$ a $0{,}225$; špičatost $-0{,}261$ a $-0{,}220$). Společně s histogramy a Q-Q grafy lze data po odstranění OP považovat za **velmi dobře odpovídající normálnímu rozdělení**.
+
+2. **Zhodnocení nárůstu FPS po aplikaci patche 1.5:**  
+   - Obě karty zaznamenaly jednoznačné a stabilní zvýšení výkonu ve hře Cyberpunk 2077.
+   - **Nvidia RTX 3070 Ti** zaznamenala průměrný nárůst **$5{,}29$ FPS** (medián $5{,}20$ FPS).
+   - **AMD Radeon RX 6800 XT** zaznamenala průměrný nárůst **$4{,}75$ FPS** (medián $4{,}70$ FPS).
+   - Karta Nvidia RTX 3070 Ti vykázala po aplikaci patche 1.5 v průměru o přibližně **$0{,}54$ FPS** vyšší výkonnostní nárůst než AMD Radeon RX 6800 XT.
