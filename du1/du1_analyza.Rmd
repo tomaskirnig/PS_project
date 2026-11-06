@@ -122,7 +122,7 @@ data_long <- data_long %>%
 
 # Vícenásobný krabicový graf (po odstranění odlehlých pozorování)
 
-Vzhledem k tomu, že odstranění odlehlých pozorování vedlo k **zásadní změně měřítka a vzhledu grafu** (rozsah osy Y se zúžil z cca $[-6, 14]$ na přibližně $[3, 7]$ FPS), je tento graf povinnou součástí analýzy.
+Vzhledem k tomu, že odstranění odlehlých pozorování vedlo k **zásadní změně měřítka a vzhledu grafu** (rozsah osy Y se zúžil z cca $[-6, 14]$ na přibližně $[3, 7]$ FPS), je tento graf nezbytný pro detailní a nezkreslené posouzení polohy a variability obou souborů.
 
 ```{r boxplot-ocisteny}
 par(mar = c(4.5, 4.5, 3.5, 1.5))
@@ -301,7 +301,9 @@ knitr::kable(tabulka_vysledku, caption = "Tab. 2: Srovnání popisných statisti
    - Karta Nvidia RTX 3070 Ti vykázala po aplikaci patche 1.5 v průměru o přibližně **$0{,}54$ FPS** vyšší výkonnostní nárůst než AMD Radeon RX 6800 XT.
 
 
-# Export grafických výstupů do PDF pro LMS
+# Export grafických výstupů do PDF
+
+Všechny grafické výstupy vyexportujeme do vícestránkového PDF souboru `graficke_vystupy.pdf` pro odevzdání jako grafická příloha.
 
 ```{r export-pdf}
 pdf_vystup <- if (dir.exists("du1")) file.path("du1", "graficke_vystupy.pdf") else "graficke_vystupy.pdf"

@@ -1,17 +1,30 @@
 {
     "workbench.colorCustomizations": {
-        "foreground": "#d0d0d0",
-        "editor.foreground": "#d0d0d0"
+        "foreground": "#588cc1",
+        "sideBar.foreground": "#b3b1ad",
+        "sideBarTitle.foreground": "#e6e1cf",
+        "activityBar.foreground": "#e6e1cf",
+        "statusBar.foreground": "#b3b1ad",
+        "tab.activeForeground": "#e6e1cf",
+        "tab.inactiveForeground": "#b3b1ad",
+        "titleBar.activeForeground": "#b3b1ad",
+        "list.activeSelectionForeground": "#e6e1cf",
+        "list.inactiveSelectionForeground": "#b3b1ad",
+        "list.hoverForeground": "#e6e1cf"
     },
     "editor.tokenColorCustomizations": {
         "textMateRules": [
             {
                 "scope": [
-                    "source",
-                    "text"
+                    "text.html.markdown",
+                    "punctuation.definition.list_item.markdown",
+                    "markup.heading",
+                    "markup.bold",
+                    "markup.italic",
+                    "markup.list"
                 ],
                 "settings": {
-                    "foreground": "#d0d0d0"
+                    "foreground": "#588cc1"
                 }
             }
         ]
