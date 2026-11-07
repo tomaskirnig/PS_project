@@ -235,8 +235,8 @@ grid()
 ```
 
 **Komentář k histogramům a Q-Q grafům:**  
-- **Histogramy (Obr. 3 a 4):** Mají pěkný symetrický zvonovitý tvar s jedním vrcholem. Červená křivka z naměřených dat se téměř přesně překrývá s modrou křivkou normálního rozdělení.
-- **Q-Q grafy (Obr. 5 a 6):** Všechny body leží těsně podél červené přímky a nikde na koncích neuhýbají. Grafy jasně potvrzují normální rozdělení.
+- **Histogramy (Obr. 3 a 4):** Mají pěkný symetrický zvonovitý tvar s jedním vrcholem. Červená křivka (jádrový odhad hustoty) z naměřených dat se téměř přesně překrývá s modrou křivkou (teoretické normální rozdělení).
+- **Q-Q grafy (Obr. 5 a 6):** Všechny body leží těsně podél červené přímky (teoretická přímka normality) a nikde na koncích neuhýbají. Grafy jasně potvrzují normální rozdělení.
 
 ---
 
