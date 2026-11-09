@@ -104,6 +104,8 @@ boxplot(narust ~ karta, data = data_long,
         col = c("#74a9cf", "#fd8d3c"),
         border = c("#02818a", "#e6550d"))
 grid(nx = NA, ny = NULL)
+prumery_puv <- tapply(data_long, data_long, mean, na.rm = TRUE)
+points(1:2, prumery_puv, col = "red", pch = 3, lwd = 2, cex = 1.15)
 ```
 
 **Komentář k Obr. 1:**  
@@ -157,6 +159,8 @@ boxplot(narust_bez_op ~ karta, data = data_long,
         col = c("#74a9cf", "#fd8d3c"),
         border = c("#02818a", "#e6550d"))
 grid(nx = NA, ny = NULL)
+prumery_cist <- tapply(data_long, data_long, mean, na.rm = TRUE)
+points(1:2, prumery_cist, col = "red", pch = 3, lwd = 2, cex = 1.15)
 ```
 
 **Komentář k Obr. 2:**  
@@ -236,13 +240,35 @@ grid()
 
 **Komentář k histogramům a Q-Q grafům:**  
 - **Histogramy (Obr. 3 a 4):** Mají pěkný symetrický zvonovitý tvar s jedním vrcholem. Červená křivka (jádrový odhad hustoty) z naměřených dat se téměř přesně překrývá s modrou křivkou (teoretické normální rozdělení).
-- **Q-Q grafy (Obr. 5 a 6):** Všechny body leží těsně podél červené přímky (teoretická přímka normality) a nikde na koncích neuhýbají. Grafy jasně potvrzují normální rozdělení.
+- **Q-Q grafy (Obr. 5 a 6):** Všechny body leží těsně podél červené přímky (teoretická přímka normality) a nikde na koncích neuhýbají. Grafické výstupy neodporují předpokladu normálního rozdělení a v kombinaci s výběrovou šikmostí a špičatost v mezích (-2, 2) lze rozdělení výběrových dat považovat za přibližně normální.
 
 ---
 
 # 6. Souhrnná tabulka popisných statistik
 
 ```{r stats}
+zaokrouhli_sd <- function(s, n) {
+  rad <- floor(log10(s))
+  posun <- 10^(2 - rad) # 3 platné cifry pro n mezi 31 a 2000
+  ceiling(s * posun) / posun
+}
+
+calc_skewness <- function(x) {
+  x <- x[!is.na(x)]
+  n <- length(x)
+  m3 <- sum((x - mean(x))^3) / n
+  s3 <- (sum((x - mean(x))^2) / n)^(3/2)
+  m3 / s3
+}
+
+calc_kurtosis <- function(x) {
+  x <- x[!is.na(x)]
+  n <- length(x)
+  m4 <- sum((x - mean(x))^4) / n
+  s4 <- (sum((x - mean(x))^2) / n)^2
+  (m4 / s4) - 3
+}
+
 spocti_statistiky <- function(df, sloupec, nazev_stavu) {
   df %>%
     group_by(karta) %>%
@@ -250,13 +276,13 @@ spocti_statistiky <- function(df, sloupec, nazev_stavu) {
       Stav = nazev_stavu,
       n = sum(!is.na({{ sloupec }})),
       Prumer = round(mean({{ sloupec }}, na.rm = TRUE), 3),
-      Sm_Odchylka = round(sd({{ sloupec }}, na.rm = TRUE), 3),
+      Sm_Odchylka = zaokrouhli_sd(sd({{ sloupec }}, na.rm = TRUE), sum(!is.na({{ sloupec }}))),
       Median = round(median({{ sloupec }}, na.rm = TRUE), 3),
       IQR = round(IQR({{ sloupec }}, na.rm = TRUE), 3),
       Min = round(min({{ sloupec }}, na.rm = TRUE), 3),
       Max = round(max({{ sloupec }}, na.rm = TRUE), 3),
-      Sikmost = round(moments::skewness({{ sloupec }}, na.rm = TRUE), 3),
-      Spicatost = round(moments::kurtosis({{ sloupec }}, na.rm = TRUE) - 3, 3),
+      Sikmost = round(calc_skewness({{ sloupec }}), 3),
+      Spicatost = round(calc_kurtosis({{ sloupec }}), 3),
       .groups = "drop"
     )
 }
@@ -279,12 +305,12 @@ tabulka_vysledku
 - **Očištěná data:** Výběrová šikmost i špičatost se u obou karet bezpečně vešly do tolerančního intervalu $(-2, 2)$ a přiblížily se k nule:
   - *Nvidia RTX 3070 Ti:* šikmost $= 0{,}131$, špičatost $= -0{,}220$.
   - *AMD Radeon RX 6800 XT:* šikmost $= 0{,}223$, špičatost $= -0{,}182$.
-- Spolu s histogramy a Q-Q grafy lze konstatovat, že **očištěná data velmi dobře odpovídají normálnímu rozdělení**.
+- Spolu s histogramy a Q-Q grafy lze konstatovat, že **očištěná data neodporují předpokladu normality**.
 
 ---
 
 ### 2. Věcné zhodnocení nárůstu výkonu (Cyberpunk 2077, patch 1.5):
-1. **Jednoznačné zlepšení výkonu:** Obě karty zaznamenaly statisticky i prakticky prokazatelný nárůst průměrného FPS (všechna očištěná měření leží v kladném intervalu od $3{,}2$ do $6{,}6$ FPS).
+1. **Jednoznačné zlepšení výkonu:** Obě karty zaznamenaly pozitivní nárůst ve výběrovém souboru (pro rigorózní statistické ověření významnosti je však nutné provést testování hypotéz) průměrného FPS (všechna očištěná měření leží v kladném intervalu od $3{,}2$ do $6{,}6$ FPS).
 2. **Srovnání karet:**
    - **Nvidia RTX 3070 Ti** dosáhla průměrného nárůstu **$5{,}28$ FPS** (medián $5{,}20$ FPS, směrodatná odchylka $0{,}59$ FPS).
    - **AMD Radeon RX 6800 XT** dosáhla průměrného nárůstu **$4{,}75$ FPS** (medián $4{,}70$ FPS, směrodatná odchylka $0{,}67$ FPS).
